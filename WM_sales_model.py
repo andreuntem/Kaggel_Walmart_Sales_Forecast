@@ -33,68 +33,18 @@ import pandas as pd
 
 
 # ========================================================================
-# IMPORT DATA
+# IMPORT DATA and PREP
 # ========================================================================
-df
-dftr     = pd.read_csv('train.csv')
-dfts     = pd.read_csv('test.csv')
-features = pd.read_csv('features.csv')
-stores   = pd.read_csv('stores.csv')
-holidays = pd.read_csv('holidays.csv')
-
-
-# ========================================================================
-# CREATE DICTIONARIES FROM dfft, stores and holidays
-# dict_holidays: {date: holiday}
-#                e.g.: dict_holidays['2010-12-02'] returns 'Super_Bowl'
-# ========================================================================
-dict_holidays = holidays.set_index('date')['holiday'].to_dict()
-features['store_date'] = [str(features.loc[i,'Store'])+'_'+features.loc[i,'Date'] for i in range(len(features))]
-
-# Create list of dates and relate it to holidays
-dates = pd.DataFrame(np.unique(dftr['Date']),columns=['date'])
-holidays_special = holidays['date']
-holidays_all = np.unique(dftr.loc[dftr['IsHoliday']==True,'Date'])
-for i in range(len(dates)):
-    date = dates.loc[i,'date']
-    if date in list(holidays_all):
-        output = 'Others'
-    else:
-        output = 0
-    if date in list(holidays_special):
-        output = dict_holidays[date]
-    dates.loc[i,'Holiday']=output
+df   = pd.read_csv('treated_data.csv')
+test = df['Weekly_Sales'].isna()
+X    = df[~test].drop('Weekly_Sales',axis=1)
+Xt   = df[test].drop('Weekly_Sales',axis=1)
+y    = df.loc[~test,'Weekly_Sales']
 
 
 # ========================================================================
-# MAP TEMPERATURE, TYPE, SIZE AND HOLIDAYS TO DATAFRAME 
+# CREATE MODEL SARIMAX
 # ========================================================================
-
-# Map temperature:
-dftr['store_date'] = [str(dftr.loc[i,'Store'])+'_'+dftr.loc[i,'Date'] for i in range(len(dftr))]
-dftr = pd.merge(dftr, features[['store_date','Temperature','Unemployment',
-                                'MarkDown1','MarkDown2','MarkDown3','MarkDown4','MarkDown5']], 
-                how='left', left_on='store_date',right_on='store_date')
-
-# Map type and size:
-dftr = pd.merge(dftr, stores, how='left', left_on='Store',right_on='Store')
-
-# Map holidays:
-dftr = pd.merge(dftr, dates, how='left', left_on='Date', right_on='date')
-
-# Select variables:
-var_selected = ['Store','Dept','Date','Weekly_Sales','Temperature','Type','Size','Holiday']
-df = dftr[var_selected]
-
-print('>>> Selected dataframe: {}'.format(df.shape))
-
-
-
-# ========================================================================
-# MAP TEMPERATURE, TYPE, SIZE AND HOLIDAYS TO DATAFRAME 
-# ========================================================================
-export_file='treated_data.csv'
-df.to_csv(export_file)
 
 
 print('final')

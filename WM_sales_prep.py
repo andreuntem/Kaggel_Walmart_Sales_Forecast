@@ -85,8 +85,12 @@ df = pd.merge(df, stores, how='left', left_on='Store',right_on='Store')
 # Map holidays:
 df = pd.merge(df, dates, how='left', left_on='Date', right_on='date')
 
+# Calculate total Markdown:
+df['MarkDown'] = df['MarkDown1']+df['MarkDown2']+df['MarkDown3']+df['MarkDown4']+df['MarkDown5']
+
 # Select variables:
-var_selected = ['Store','Dept','Date','Holiday','Temperature','Type','Size','Weekly_Sales']
+var_selected = ['Store','Dept','Date','Holiday','Temperature','Type','Size','Weekly_Sales',
+                'MarkDown1','MarkDown2','MarkDown3','MarkDown4','MarkDown5','MarkDown']
 dfn = df[var_selected]
 
 print('>>> Selected dataframe: {}'.format(dfn.shape))

@@ -86,7 +86,7 @@ df = pd.merge(df, stores, how='left', left_on='Store',right_on='Store')
 df = pd.merge(df, dates, how='left', left_on='Date', right_on='date')
 
 # Calculate total Markdown:
-df['MarkDown'] = df['MarkDown1']+df['MarkDown2']+df['MarkDown3']+df['MarkDown4']+df['MarkDown5']
+df['MarkDown'] = df['MarkDown1'].fillna(0) + df['MarkDown2'].fillna(0) + df['MarkDown3'].fillna(0) + df['MarkDown4'].fillna(0) +df['MarkDown5'].fillna(0)
 
 # Select variables:
 var_selected = ['Store','Dept','Date','Holiday','Temperature','Type','Size','Weekly_Sales',

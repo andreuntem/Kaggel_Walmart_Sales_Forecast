@@ -31,7 +31,8 @@ cur = conn.cursor()
 
 # Table: week
 cur.execute('DROP TABLE IF EXISTS week')
-cur.execute('CREATE TABLE week (id INTEGER PRIMARY KEY, date TEXT UNIQUE, train INTEGER)')
+cur.execute('''CREATE TABLE week (id INTEGER PRIMARY KEY, date TEXT UNIQUE, 
+                                  weeknum INTEGER, train INTEGER)''')
 
 # Table: dept
 cur.execute('DROP TABLE IF EXISTS dept')
@@ -65,7 +66,6 @@ cur.execute('''CREATE TABLE features (store_id INTEGER, week_id INTEGER, tempera
 # READ TRAINING.CSV
 # Populate: week, store, dept and sales
 # ===========================================================================
-
 with open('train.csv','r') as csvfile:
 
     csvreader = csv.reader(csvfile)
@@ -81,7 +81,7 @@ with open('train.csv','r') as csvfile:
         
         # Populate: week
         try:
-            cur.execute('INSERT OR IGNORE INTO week (date,train) VALUES (?,?)',(date_i,1,))
+            cur.execute('''INSERT OR IGNORE INTO week (date,train) VALUES (?,?)''',(date_i,1,))
         except:
             pass
 
@@ -113,7 +113,6 @@ conn.commit()
 # READ TEST.CSV
 # Populate: week, store, dept and sales
 # ===========================================================================
-
 with open('test.csv','r') as csvfile:
 
     csvreader = csv.reader(csvfile)    
@@ -128,7 +127,7 @@ with open('test.csv','r') as csvfile:
         
         # Populate: week
         try:
-            cur.execute('INSERT OR IGNORE INTO week (date,train) VALUES (?,?)',(date_i,0,))
+            cur.execute('''INSERT OR IGNORE INTO week (date,train) VALUES (?,?)''',(date_i,0,))
         except:
             pass
     
@@ -255,15 +254,59 @@ conn.commit()
 
 
 # ===========================================================================
-# COMPLETE FEATURES.MARKDOWN
+# CALCULATE WEEKNUM
 # ===========================================================================
+cur.execute('SELECT id FROM week')
+for row in cur.fetchall():
+    i = int(row[0])
+    weekn = int(i % 52)
+    
+    cur.execute('SELECT id FROM week WHERE id = ?', (i,))
+    try:
+        cur.execute('UPDATE week SET weeknum = ? WHERE id = ?', (weekn, i,))
+    except:
+        pass
+
+conn.commit()
+cur.execute('SELECT id FROM week')
+
+# ===========================================================================
+# INCLUDE WEEKNUM IN SALES TABLE
+# ===========================================================================
+# Include the columns weeknum
+cur.execute('''ALTER TABLE sales
+                ADD COLUMN weeknum INT''')
+
+# Join with 
+cur.execute('''UPDATE sales
+                SET weeknum = (SELECT weeknum FROM week WHERE id=sales.week_id)''')
+
+conn.commit()
 
 
-
+# ===========================================================================
+# CALCULATE TOTAL MARKDOWN BY STORE and DATE
+# ===========================================================================
+cur.execute('DROP TABLE IF EXISTS markdowns')
+cur.execute('CREATE TABLE markdowns (store_id INTEGER, weeknum INTEGER, markdown REAL, UNIQUE(store_id, weeknum))')
+cur.execute('''INSERT INTO markdowns
+                SELECT features.store_id, week.weeknum, avg(features.markdown)
+                FROM features 
+                JOIN week 
+                ON features.week_id=week.id 
+                WHERE markdown>0 
+                GROUP BY store_id, weeknum''');
+conn.commit()
 conn.close()
 
 
-
+#SELECT sales.*, store.size, holidays.name, markdowns.markdown
+#FROM sales
+#LEFT JOIN week on sales.week_id=week.id
+#LEFT JOIN store on sales.store_id=store.id
+#LEFT JOIN holidays on sales.week_id=holidays.week_id
+#LEFT JOIN markdowns on sales.store_id=markdowns.store_id and sales.week_id=markdowns.weeknum
+#where week.train=1
 # ===========================================================================
 # TEST:: QUERY
 # ===========================================================================
